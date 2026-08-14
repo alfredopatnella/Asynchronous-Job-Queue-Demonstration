@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Asynchronous Job Processing with AWS</title>
+<meta name="description" content="An educational companion site for the aws-cdk-lambda-sqs-worker sample: API Gateway, Lambda, SQS, and CloudWatch." />
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #f6f7f9;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1a1d23;
+    --text-muted: #5b6270;
+    --accent: #b5541e;
+    --accent-soft: #f2e4d8;
+    --ok: #1e7a4a;
+    --ok-soft: #e3f3ea;
+    --fail: #b3261e;
+    --fail-soft: #fbe6e4;
+    --code-bg: #1a1d23;
+    --code-text: #e8eaee;
+    --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 1px 8px rgba(20, 22, 26, 0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --bg-alt: #1b1e24;
+      --card: #1c1f26;
+      --border: #2c3038;
+      --text: #eceef1;
+      --text-muted: #a3aab5;
+      --accent: #e0925a;
+      --accent-soft: #3a2c20;
+      --ok: #6fd19a;
+      --ok-soft: #16281f;
+      --fail: #f3897f;
+      --fail-soft: #2e1a19;
+      --code-bg: #0c0d10;
+      --code-text: #dfe2e8;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 12px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+  h1, h2, h3 { line-height: 1.25; letter-spacing: -0.01em; }
+  h2 { font-size: 1.6rem; margin: 0 0 0.75rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+  p { color: var(--text-muted); }
+  a { color: var(--accent); }
+  section { padding: 3.5rem 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .eyebrow {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 0.5rem;
+  }
+  code, pre {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85em;
+  }
+  code { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 4px; padding: 0.1em 0.4em; }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1rem 1.1rem;
+    border-radius: 10px;
+    overflow-x: auto;
+    line-height: 1.55;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  /* --- Hero --- */
+  .hero {
+    padding: 4.5rem 0 3rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 0.5rem; }
+  .hero .subtitle {
+    font-family: monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    margin: 0 0 1.25rem;
+  }
+  .hero p.lead { max-width: 640px; margin: 0 auto; font-size: 1.05rem; }
+  .hero .links { margin-top: 1.75rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* --- Diagram building blocks --- */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 2rem 0;
+  }
+  .node {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1.1rem;
+    box-shadow: var(--shadow);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-align: center;
+    min-width: 9rem;
+  }
+  .node.accent { border-color: var(--accent); color: var(--accent); }
+  .node.subtle { font-weight: 500; color: var(--text-muted); border-style: dashed; }
+  .arrow { color: var(--text-muted); font-size: 1.3rem; }
+  .flow.vertical { flex-direction: column; }
+  .flow.vertical .arrow { transform: none; }
+
+  .steps { counter-reset: step; list-style: none; margin: 1.5rem 0; padding: 0; display: grid; gap: 0.6rem; }
+  .steps li {
+    counter-increment: step;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 1rem 0.7rem 2.6rem;
+    position: relative;
+    font-size: 0.94rem;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0.8rem;
+    top: 0.6rem;
+    width: 1.3rem; height: 1.3rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    box-shadow: var(--shadow);
+  }
+  .card h4 { margin: 0 0 0.4rem; font-size: 0.98rem; }
+  .card p { margin: 0; font-size: 0.88rem; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .table-wrap { overflow-x: auto; }
+
+  .badge { display: inline-block; border-radius: 999px; padding: 0.15em 0.65em; font-size: 0.78em; font-weight: 700; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.fail { background: var(--fail-soft); color: var(--fail); }
+
+  /* Timeline for visibility timeout */
+  .timeline { display: grid; gap: 0; margin: 1.5rem 0; border-left: 2px solid var(--border); padding-left: 1.3rem; }
+  .timeline .tick { position: relative; padding-bottom: 1.5rem; }
+  .timeline .tick:last-child { padding-bottom: 0; }
+  .timeline .tick::before {
+    content: "";
+    position: absolute;
+    left: -1.62rem;
+    top: 0.2rem;
+    width: 0.6rem; height: 0.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .timeline .tick strong { display: block; font-size: 0.92rem; }
+  .timeline .tick span { color: var(--text-muted); font-size: 0.85rem; }
+
+  /* Batch grid for partial failure */
+  .batch { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.25rem 0; }
+  .job-chip {
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: 1px solid var(--border);
+  }
+  .job-chip.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .job-chip.fail { background: var(--fail-soft); color: var(--fail); border-color: var(--fail); }
+
+  /* Concurrency bars */
+  .queue-bar { display: flex; gap: 3px; margin: 1rem 0; flex-wrap: wrap; }
+  .queue-bar span {
+    width: 1.4rem; height: 1.4rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+  }
+  .workers { display: flex; gap: 1rem; margin-top: 0.5rem; }
+  .worker-box {
+    flex: 1;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    padding: 0.9rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 3rem 1.5rem;
+  }
+  footer a { color: var(--text-muted); }
+
+  @media (max-width: 600px) {
+    section { padding: 2.5rem 0; }
+    .hero { padding: 3rem 0 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <p class="eyebrow">aws-cdk-lambda-sqs-worker</p>
+  <h1>Asynchronous Job Processing with AWS</h1>
+  <p class="subtitle">API Gateway → Lambda → SQS → Lambda</p>
+  <p class="lead">
+    Learn how to decouple HTTP requests from background processing using
+    AWS Lambda, SQS, dead-letter queues, retries, batch processing,
+    concurrency controls, and AWS&nbsp;CDK &mdash; through one small,
+    readable, deployable sample.
+  </p>
+  <div class="links">
+    <a class="btn primary" href="#try-it">Try it yourself</a>
+    <a class="btn" href="#architecture">See the architecture</a>
+  </div>
+</header>
+
+<main>
+
+  <section id="problem">
+    <p class="eyebrow">The problem</p>
+    <h2>Why not just do the work in the API call?</h2>
+    <p>
+      A client asks the API to generate a report. Generating it might take
+      seconds, or minutes. If the API does the work itself, the HTTP
+      connection stays open the whole time, and the API is now tightly
+      coupled to how long report generation takes.
+    </p>
+    <div class="flow">
+      <div class="node subtle">Client</div><span class="arrow">→</span>
+      <div class="node subtle">API</div><span class="arrow">→</span>
+      <div class="node subtle">Generate report</div><span class="arrow">→</span>
+      <div class="node subtle">Wait…</div><span class="arrow">→</span>
+      <div class="node subtle">Response</div>
+    </div>
+    <p>Instead, this sample separates <strong>accepting</strong> the job from <strong>doing</strong> the job:</p>
+    <div class="flow">
+      <div class="node">Client</div><span class="arrow">→</span>
+      <div class="node">API</div><span class="arrow">→</span>
+      <div class="node">Producer</div><span class="arrow">→</span>
+      <div class="node accent">SQS</div><span class="arrow">→</span>
+      <div class="node">Worker</div>
+    </div>
+    <p>The API returns as soon as the job is queued. Processing happens later, on its own schedule. This improves resilience, scalability, burst handling, and failure isolation.</p>
+  </section>
+
+  <section id="architecture">
+    <p class="eyebrow">Architecture</p>
+    <h2>The full picture</h2>
+    <div class="flow vertical">
+      <div class="node subtle">Client</div>
+      <span class="arrow">↓</span>
+      <div class="node">API Gateway</div>
+      <span class="arrow">↓</span>
+      <div class="node accent">Producer Lambda</div>
+      <span class="arrow">↓ SendMessage</span>
+      <div class="node accent">SQS Job Queue</div>
+      <span class="arrow">↓ batches of 5</span>
+      <div class="node accent">Worker Lambda</div>
+      <span class="arrow">↓ repeated failures (3×)</span>
+      <div class="node" style="border-color:var(--fail); color:var(--fail);">Dead-Letter Queue</div>
+    </div>
+    <p>Every log line and metric from the producer and worker lands in CloudWatch, where three alarms watch for a stuck DLQ, an aging queue, or worker errors.</p>
+  </section>
+
+  <section id="lifecycle">
+    <p class="eyebrow">Request lifecycle</p>
+    <h2>What happens on <code>POST /jobs</code></h2>
+    <ol class="steps">
+      <li>Client sends <code>POST /jobs</code> with a report request.</li>
+      <li>API Gateway invokes the Producer Lambda.</li>
+      <li>Producer validates the body and generates a <code>jobId</code>.</li>
+      <li>Producer sends the job to SQS.</li>
+      <li>API responds <code>202 Accepted</code> &mdash; before any processing happens.</li>
+      <li>Lambda's managed event source mapping polls SQS (no custom polling code).</li>
+      <li>Worker receives a batch of up to 5 jobs.</li>
+      <li>Worker processes each job independently.</li>
+      <li>Successful jobs are deleted from the queue automatically.</li>
+      <li>Failed jobs become visible again once the visibility timeout expires.</li>
+      <li>Jobs that fail 3 times move to the dead-letter queue.</li>
+    </ol>
+  </section>
+
+  <section id="why-sqs">
+    <p class="eyebrow">Why SQS exists here</p>
+    <h2>A buffer, not just a pipe</h2>
+    <p>
+      SQS sits between the producer and the worker so that submitting a job
+      and processing a job never have to happen at the same rate. It durably
+      stores messages, tracks how many times each one has been delivered,
+      and enforces the visibility timeout that makes retries possible &mdash;
+      all without either Lambda writing any queueing logic itself.
+    </p>
+  </section>
+
+  <section id="visibility-timeout">
+    <p class="eyebrow">Core concept</p>
+    <h2>Understanding the SQS visibility timeout</h2>
+    <p>When the worker receives a message, SQS doesn't delete it right away &mdash; it hides it temporarily.</p>
+    <div class="timeline">
+      <div class="tick"><strong>0s &mdash; Message received</strong><span>Worker Lambda is invoked with this message in its batch.</span></div>
+      <div class="tick"><strong>Message becomes invisible</strong><span>Other consumers cannot see it while it's "in flight."</span></div>
+      <div class="tick"><strong>Worker processes the job</strong><span><code>processJob()</code> runs.</span></div>
+      <div class="tick"><strong>Success → deleted, or Failure → left alone</strong><span>A failure means the message is simply not deleted.</span></div>
+      <div class="tick"><strong>Visibility timeout expires (90s)</strong><span>Comfortably longer than the 15s worker timeout, on purpose.</span></div>
+      <div class="tick"><strong>Message becomes visible again → retried</strong><span><code>ApproximateReceiveCount</code> increments.</span></div>
+    </div>
+    <p><strong>Lambda timeout ≠ SQS visibility timeout.</strong> If the visibility timeout were shorter than the time a job actually needs, SQS could redeliver the message to a second worker <em>while the first is still running</em> &mdash; duplicate, overlapping processing. That's why this sample sets 90s of visibility against a 15s function timeout.</p>
+    <p>This is also why SQS is described as <strong>at-least-once delivery</strong>: a worker may occasionally see the same message more than once, even when everything is configured correctly.</p>
+  </section>
+
+  <section id="batching">
+    <p class="eyebrow">Core concept</p>
+    <h2>Batch processing</h2>
+    <div class="flow">
+      <div class="node subtle">A</div>
+      <div class="node subtle">B</div>
+      <div class="node subtle">C</div>
+      <div class="node subtle">D</div>
+      <div class="node subtle">E</div>
+    </div>
+    <p style="text-align:center; margin: -0.5rem 0 0.5rem;">↓ one invocation, one batch</p>
+    <div class="flow">
+      <div class="node accent">Worker Lambda: [A, B, C, D, E]</div>
+    </div>
+    <p>Fewer invocations for the same number of jobs is more efficient and cheaper &mdash; but a bigger batch also means a bug that crashes the whole function affects more messages at once. <code>batchSize: 5</code> keeps that blast radius small and easy to observe.</p>
+  </section>
+
+  <section id="partial-failure">
+    <p class="eyebrow">Core concept &mdash; the most important one here</p>
+    <h2>Partial batch failures</h2>
+    <p>Suppose 5 messages are delivered and only one fails:</p>
+    <div class="batch">
+      <div class="job-chip ok">✓ Job A</div>
+      <div class="job-chip ok">✓ Job B</div>
+      <div class="job-chip fail">✕ Job C</div>
+      <div class="job-chip ok">✓ Job D</div>
+      <div class="job-chip ok">✓ Job E</div>
+    </div>
+    <p>Without a partial batch response, <strong>all five</strong> would be retried. With one, the worker tells Lambda exactly which message failed:</p>
+    <pre><code>{
+  "batchItemFailures": [
+    { "itemIdentifier": "message-id-for-C" }
+  ]
+}</code></pre>
+    <p>Only Job C is retried. A, B, D, and E are never reprocessed.</p>
+  </section>
+
+  <section id="retry-dlq">
+    <p class="eyebrow">Core concept</p>
+    <h2>Retries and the dead-letter queue</h2>
+    <div class="flow vertical">
+      <div class="node subtle">Job</div>
+      <span class="arrow">↓</span>
+      <div class="node" style="border-color:var(--fail); color:var(--fail);">Attempt 1 ✕</div>
+      <span class="arrow">↓ wait for visibility timeout</span>
+      <div class="node" style="border-color:var(--fail); color:var(--fail);">Attempt 2 ✕</div>
+      <span class="arrow">↓ wait for visibility timeout</span>
+      <div class="node" style="border-color:var(--fail); color:var(--fail);">Attempt 3 ✕</div>
+      <span class="arrow">↓</span>
+      <div class="node accent">Dead-Letter Queue</div>
+    </div>
+    <p>
+      A DLQ isolates messages that exhausted their retries (<code>maxReceiveCount: 3</code>
+      here) so a human can investigate. <strong>It does not fix anything
+      automatically</strong> &mdash; nothing retries or repairs a DLQ message on
+      its own; someone has to look at it and decide what to do.
+    </p>
+  </section>
+
+  <section id="concurrency">
+    <p class="eyebrow">Core concept</p>
+    <h2>Lambda concurrency and backpressure</h2>
+    <p>A burst of jobs lands in the queue faster than they can be processed:</p>
+    <div class="queue-bar">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <p>Only 2 worker executions run at a time (<code>reservedConcurrentExecutions: 2</code>):</p>
+    <div class="workers">
+      <div class="worker-box">Worker #1</div>
+      <div class="worker-box">Worker #2</div>
+    </div>
+    <p>
+      Everything beyond that capacity simply waits in the queue instead of
+      overwhelming the worker or whatever it calls downstream. Queue depth
+      and message age become a direct, visible measure of this
+      <strong>backpressure</strong>.
+    </p>
+  </section>
+
+  <section id="idempotency">
+    <p class="eyebrow">Core concept</p>
+    <h2>Why idempotency matters</h2>
+    <p>Because SQS is at-least-once, not exactly-once:</p>
+    <div class="flow vertical">
+      <div class="node subtle">Worker finishes job</div>
+      <span class="arrow">↓</span>
+      <div class="node subtle">Interruption before delete is acknowledged</div>
+      <span class="arrow">↓</span>
+      <div class="node subtle">SQS delivers the job again</div>
+    </div>
+    <p>
+      A production worker should check an idempotency store
+      (<code>jobId → COMPLETED</code>, e.g. in DynamoDB) before repeating any
+      side effect. This sample shows exactly where that check would go in
+      <code>src/worker/handler.ts</code>, without adding a database just to
+      demonstrate the idea.
+    </p>
+  </section>
+
+  <section id="failure-scenarios">
+    <p class="eyebrow">Reference</p>
+    <h2>Failure scenarios</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Failure</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>Producer cannot reach SQS</td><td>API request fails</td></tr>
+          <tr><td>Worker crashes</td><td>Message becomes visible after visibility timeout</td></tr>
+          <tr><td>One message in a batch fails</td><td>Only that message is retried</td></tr>
+          <tr><td>Job repeatedly fails</td><td>Message moves to the DLQ</td></tr>
+          <tr><td>Worker concurrency exhausted</td><td>Messages wait in SQS (backpressure)</td></tr>
+          <tr><td>Duplicate message delivered</td><td>An idempotent worker safely ignores or reconciles it</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="resources">
+    <p class="eyebrow">Reference</p>
+    <h2>Resources created by CDK</h2>
+    <div class="cards">
+      <div class="card"><h4>API Gateway</h4><p>Exposes <code>POST /jobs</code> over HTTPS.</p></div>
+      <div class="card"><h4>Producer Lambda</h4><p>Validates, generates <code>jobId</code>, enqueues, returns 202.</p></div>
+      <div class="card"><h4>SQS Job Queue</h4><p>90s visibility timeout, redrives to the DLQ.</p></div>
+      <div class="card"><h4>Worker Lambda</h4><p>Batch size 5, partial batch failures, reserved concurrency 2.</p></div>
+      <div class="card"><h4>Dead-Letter Queue</h4><p>Holds jobs that failed 3 times.</p></div>
+      <div class="card"><h4>Event Source Mapping</h4><p>AWS-managed polling; no custom loop.</p></div>
+      <div class="card"><h4>CloudWatch Logs</h4><p>Structured logs with <code>jobId</code> and receive counts.</p></div>
+      <div class="card"><h4>CloudWatch Alarms</h4><p>DLQ depth, oldest message age, worker errors.</p></div>
+    </div>
+  </section>
+
+  <section id="try-it">
+    <p class="eyebrow">Try it yourself</p>
+    <h2>Submit a job</h2>
+    <p>After deploying (see the README), submit a normal job:</p>
+    <pre><code>curl -X POST "$API_URL/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reportType": "monthly-sales",
+    "requestedBy": "demo@example.com"
+  }'</code></pre>
+    <p>Or trigger the retry → DLQ path on purpose:</p>
+    <pre><code>curl -X POST "$API_URL/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reportType": "monthly-sales",
+    "requestedBy": "demo@example.com",
+    "simulateFailure": true
+  }'</code></pre>
+    <p>Then watch, in order: the API response (still <code>202</code>), the producer logs, the queue's <code>ApproximateAgeOfOldestMessage</code>, the worker logs (receive count climbing), and finally the dead-letter queue.</p>
+  </section>
+
+  <section id="production">
+    <p class="eyebrow">Going further</p>
+    <h2>Production considerations</h2>
+    <div class="cards">
+      <div class="card"><h4>Implemented in this sample</h4><p>Async processing, partial batch failures, DLQ + redrive policy, reserved concurrency, basic alarms, least-privilege IAM.</p></div>
+      <div class="card"><h4>Recommended for production</h4><p>API auth, a real idempotency store, a job-status API, tracing, alarm notifications, DLQ replay strategy, CI/CD, and load testing.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Educational companion site for
+    <a href="../README.md">aws-cdk-lambda-sqs-worker</a>.
+    See <a href="../docs/architecture.md">docs/architecture.md</a>,
+    <a href="../docs/security.md">docs/security.md</a>,
+    <a href="../docs/cost-considerations.md">docs/cost-considerations.md</a>, and
+    <a href="../docs/troubleshooting.md">docs/troubleshooting.md</a>
+    for more detail.
+  </p>
+</footer>
+
+</body>
+</html>

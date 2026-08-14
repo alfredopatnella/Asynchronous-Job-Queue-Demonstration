@@ -1,0 +1,35 @@
+{
+  "name": "aws-cdk-lambda-sqs-worker",
+  "version": "1.0.0",
+  "description": "Educational AWS CDK sample: asynchronous job queue with API Gateway, Lambda, SQS, and CloudWatch",
+  "bin": {
+    "aws-cdk-lambda-sqs-worker": "bin/aws-cdk-lambda-sqs-worker.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.0.0",
+    "aws-cdk": "2.1136.0",
+    "esbuild": "^0.23.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.5.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.600.0",
+    "aws-cdk-lib": "2.265.0",
+    "constructs": "^10.8.1",
+    "source-map-support": "^0.5.21"
+  }
+}
