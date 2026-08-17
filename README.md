@@ -1,5 +1,7 @@
 # AWS CDK Asynchronous Job Queue
 
+🌐 Language: **English** | [Español](README.es.md)
+
 ### API Gateway → Lambda → SQS → Lambda
 
 A complete but intentionally simple, educational AWS CDK sample demonstrating

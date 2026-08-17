@@ -1,5 +1,7 @@
 # Troubleshooting
 
+🌐 Language: **English** | [Español](es/troubleshooting.md)
+
 A practical guide for diagnosing the most common issues when running or
 demonstrating this stack.
 

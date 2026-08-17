@@ -1,5 +1,7 @@
 # Security
 
+🌐 Language: **English** | [Español](es/security.md)
+
 This is an educational sample, not a hardened production system. This
 document is explicit about what is and is not covered, so it isn't mistaken
 for a complete security posture.

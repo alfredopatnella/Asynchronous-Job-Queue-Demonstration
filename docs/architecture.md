@@ -1,5 +1,7 @@
 # Architecture
 
+🌐 Language: **English** | [Español](es/architecture.md)
+
 This document goes deeper than the README into how the pieces fit together,
 why the configuration values were chosen, and what happens on each path
 through the system (success, retry, DLQ).

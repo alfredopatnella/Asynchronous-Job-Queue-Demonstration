@@ -1,5 +1,7 @@
 # Cost Considerations
 
+🌐 Language: **English** | [Español](es/cost-considerations.md)
+
 > AWS pricing changes over time and varies by region. The numbers below are
 > for building intuition about **what drives cost** in this architecture,
 > not a quote. Always check the current [AWS Pricing pages](https://aws.amazon.com/pricing/)
